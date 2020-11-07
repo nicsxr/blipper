@@ -1,42 +1,107 @@
 {% extends "index.html" %}
 {% block content %}
-<p>Hello {{request.user.username}}</p>
-
-<div class="container mb-3" style="text-align: center; max-width: 42rem;">
-    {% if request.user.is_authenticated %}
-        <form method="post">
-            {% csrf_token %}
-            <div class="input-group">
-                <textarea name="content" class="form-control"></textarea>
-                <div class="input-group-prepend">
-                    <button class="btn btn-primary" type="submit"> Post </button>
-                </div>
-            </div>
-        </form>
-        {% for error in field.errors %}
-            <small>{{error}}</small>
-        {% endfor %}
-        {% if post_form.non_field_errors %}
-            <p>{{post_form.non_field_errors}}</p>
-    {% endif%}
-    {% endif %}
-</div>
-<div>
-    {% for post in posts %}
-        <div class="card container  mb-3" style="max-width: 40rem;">
-            <div class="card-header bg-transparent border-success">{{post.poster}}</div>
-                <div class="card-body ">
-                    <h3 class="card-text">{{ post.content }}</h3>
-                </div>
-                <div class="card-footer bg-transparent border-success=">
-                    Likes: {{ post.likes }}
-                        {% if request.user.id in post.upvoters %}
-                            <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
-                        {% else %}
-                            <a type="button" class="btn btn-outline-success btn-sm" href = 'like/{{post.id}}'>Like</a>
+<div id="app">
+    <!-- news feed -->
+    <div>
+       <div class="mb-3" style="text-align: center; max-width: 42rem;">
+            {% if request.user.is_authenticated %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <textarea name="content" class="form-control"></textarea>
+                        <div class="input-group-prepend">
+                        <button class="btn btn-primary" type="submit"> Blip </button>
+                        </div>
+                    </div>
+                </form>
+                {% if post_form.non_field_errors %}
+                    <p>{{post_form.non_field_errors}}</p>
+                {% endif%}
+            {% endif %}
+       </div>
+       <div>
+          {% for post in posts %}
+          <div class="card container  mb-3" style="max-width: 40rem;">
+             <div class="card-header bg-transparent border-success">
+                {{post.poster}}
+                {% if user.is_authenticated %}
+                    {% if post.poster != request.user  %}
+                        {% if post.poster not in request.user.following.all %}
+                            <a v-on:click="follow($event, {{post.poster.id}})" type="button" class="btn btn-sm btn-primary">follow</a>
                         {% endif %}
-                </div>
-        </div>
-    {% endfor %}
-</div>
+                    {% endif %}
+                {% endif %}
+             </div>
+             <div class="card-body ">
+                <h3 class="card-text">{{ post.content }}</h3>
+             </div>
+             <div class="card-footer bg-transparent border-success=">
+                {% csrf_token %}
+                Likes: <span id="{{post.id}}">{{ post.likes }}</span>
+                {% if user.is_authenticated %}
+                    {% if request.user in post.likers.all %}
+                        <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
+                    {% else %}
+                        <a v-on:click="like({{post.id}}); $event.target.classList.toggle('disabled'); $event.target.text = 'Liked'" type="button" class="btn btn-outline-success btn-sm">Like</a>
+                    {% endif %}
+                {% endif %}
+             </div>
+          </div>
+          {% endfor %}
+       </div>
+    </div>
+ </div>
+<script>
+axios.defaults.xsrfCookieName = 'csrftoken'
+axios.defaults.xsrfHeaderName = "X-CSRFTOKEN"
+var app = new Vue({
+    delimiters: ["[[", "]]"],
+    el: '#app',
+    data: function(){
+        return{
+            searchword: '',
+            person: ''  
+        }
+    },
+    methods:{
+        like : function(id){
+            var likes = $('#'+id)
+            console.log(likes)
+            axios.post('/like/'+id, {
+            })
+            .then(function (response) {
+                console.log(response);
+                likes.text(response.data.likes)
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        },
+
+        follow : function(e, id){
+            axios.post('/follow/'+id,{
+            }).then(function(response){
+                console.log(response)
+                e.target.classList.toggle('disabled');
+                e.target.text = "Followed"
+            })
+            .catch(function(error){
+                console.log(error)
+            })
+        },
+
+        searchUser : function(){
+            var self = this
+            axios.post('/search/'+this.searchword,{
+            }).then(function(response){
+                self.person = response.data
+                console.log(response.data)
+            })
+            .catch(function(error){
+                console.log(error)
+            })
+        }
+    }
+})
+</script>
 {% endblock content %}

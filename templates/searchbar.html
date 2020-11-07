@@ -1,0 +1,67 @@
+{% block searchbar %}
+<div class="ml-5" id="searchbar"> 
+    <div class="input-group input-group-lg">
+        <input v-model="searchword" type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg" placeholder="Search users">
+        <div class="input-group-prepend">
+            <button @click.prevent="searchUser" class="btn btn-primary" id="inputGroup-sizing-lg">Search</button>
+        </div>
+    </div>
+    <br>
+    <div v-if="person" class="card">
+        <div class="card-body">
+            <span><a :href="'/profile/' + person.id" >[[person.username]]</a></span>
+            <span>| [[person.followers]] followers</span>
+            <a v-if="!person.i_follow" v-on:click="follow($event, person.id)" type="button" class="btn btn-sm btn-primary">follow</a>
+        </div>
+    </div>
+    <div v-if="error" class="card">
+        <div class="card-body">
+            <span>[[error]]</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    axios.defaults.xsrfCookieName = 'csrftoken'
+    axios.defaults.xsrfHeaderName = "X-CSRFTOKEN"
+    var app = new Vue({
+        delimiters: ["[[", "]]"],
+        el: '#searchbar',
+        data: function(){
+            return{
+                searchword: '',
+                person: '',
+                error: ''
+            }
+        },
+        methods:{
+            searchUser : function(){
+                var self = this
+                axios.post('/search/'+this.searchword,{
+                }).then(function(response){
+                    self.error = ''
+                    self.person = response.data
+                    console.log(response.data)
+                })
+                .catch(function(error){
+                    self.error = "Not found"
+                    console.log(error)
+                })
+            },
+            follow : function(e, id){
+                var self = this
+                axios.post('/follow/'+id,{
+                }).then(function(response){
+                    console.log(response)
+                    e.target.classList.toggle('disabled');
+                    e.target.text = "Followed"
+                    self.person.followers++
+                })
+                .catch(function(error){
+                    console.log(error)
+                })
+            },
+        }
+    })
+</script>
+{% endblock searchbar %}

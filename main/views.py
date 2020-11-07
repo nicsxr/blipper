@@ -1,8 +1,12 @@
-from django.shortcuts import render, redirect
-from account.models import Account, Follow
-from main.models import Post, Like
+from django.shortcuts import render, redirect, HttpResponse
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.db.models import Q
+from account.models import Account
+from main.models import Post
 from main.forms import PostForm
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 def home_view(request):
     context = {
@@ -16,36 +20,88 @@ def home_view(request):
             post.save()
             return redirect('home')
         else:
+            messages.warning(request, 'Post must be at least 1 character and not more than 255 characters.')
             context['post_form'] = form
             return redirect('home')
 
     if request.user.is_authenticated:
-        likes = Like.objects.filter(liker=request.user)
         form = PostForm()
         context['post_form'] = form
-        context['likes'] = likes
-    posts = Post.objects.all().order_by('-date_posted')
-    context['posts'] = posts
+        followers = (Q(request.user.following.all()) | Q(request.user))
+        if len(followers) > 3:
+            posts = Post.objects.filter(poster__in=followers).order_by('-date_posted')
+        else:
+            posts = Post.objects.all().order_by('-date_posted')
+        context['posts'] = posts
+    else:
+        posts = Post.objects.all().order_by('-date_posted')
+        context['posts'] = posts
     return render(request, 'home.html', context)
 
+
+def profile_view(request, id):
+    context={
+
+    }
+    try:
+        user = Account.objects.get(id=id)
+        posts = Post.objects.filter(poster=user)
+        context['user'] = user
+        context['posts'] = posts
+    except ObjectDoesNotExist:
+        messages.warning(request, 'Account not found!')
+        return redirect('/')
+    
+    return render(request, 'profile.html', context)
+
+
+# API CALLS
+@login_required(login_url='/account/login/')
 def like_post(request, id):
     # cotext= {}
-    try:
-        post=Post.objects.get(id=id)
-        like = Like.objects.get(liker=request.user, post=post)
-        return redirect('/')
-    except ObjectDoesNotExist:
-        #messages.warning(request, 'Obj doesnot exist!')
-        post=Post.objects.get(id=id)
-        like = Like(liker=request.user, post=post)
-        like.save()
-        post.likes += 1
-        post.save()
-        return redirect('/')
+    if request.method == 'POST':
+        try:
+            post = Post.objects.get(id=id)
+            if request.user in post.likers.all():
+                messages.warning(request, 'Already liked!')
+                return HttpResponseForbidden()
+            post.likers.add(request.user)
+            post.likes += 1
+            post.save()
+            return JsonResponse({
+                'likes': post.likes
+            })
+        except ObjectDoesNotExist:
+            messages.warning(request, 'Post doesnot exist!')
+            return redirect('/')
+    return HttpResponseForbidden()
 
-    #need to check permission !!!!!!!!!!!!!!1
+@login_required(login_url='/account/login/')
+def follow_user(request, id):
+    if request.method == 'POST':
+        try:
+            user = request.user
+            followee = Account.objects.get(id=id)
 
-    # return render(request, '/', context)
-    # if request.POST:
-    #     return 0
+            if followee in user.following.all():
+                return HttpResponseBadRequest()
 
+            user.following.add(followee)
+            followee.followers.add(user)
+            return HttpResponse('Success')
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest()
+
+def search_user(request, name):
+    if request.method == 'POST':
+        try:
+            user = Account.objects.get(username=name)
+            return JsonResponse({
+                'id': user.id,
+                'username': user.username,
+                'followers': user.followers.all().count(),
+                'following': user.following.all().count(),
+                'i_follow': user in request.user.following.all()
+            })
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest()

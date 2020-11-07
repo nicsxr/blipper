@@ -7,10 +7,15 @@ from main.forms import PostForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage
+
+
+posts_per_page = 7
 
 def home_view(request):
     context = {
     }
+    page_num = request.GET.get('page',1)
     if request.POST:
         form = PostForm(request.POST)
         if form.is_valid():
@@ -28,31 +33,48 @@ def home_view(request):
         form = PostForm()
         context['post_form'] = form
         followers = (Q(request.user.following.all()) | Q(request.user))
+        
         if len(followers) > 3:
             posts = Post.objects.filter(poster__in=followers).order_by('-date_posted')
         else:
             posts = Post.objects.all().order_by('-date_posted')
-        context['posts'] = posts
+
+        try:
+            page = Paginator(posts, posts_per_page).page(page_num)
+        except EmptyPage:
+            page = Paginator(posts, posts_per_page).page(1)
+        
+        context['posts'] = page
+    
     else:
         posts = Post.objects.all().order_by('-date_posted')
-        context['posts'] = posts
+        try:
+            page = Paginator(posts, posts_per_page).page(page_num)
+        except EmptyPage:
+            page = Paginator(posts, posts_per_page).page(1)
+        context['posts'] = page
     return render(request, 'home.html', context)
 
 
 def profile_view(request, id):
     context={
-
     }
+    page_num = request.GET.get('page',1)
     try:
         user = Account.objects.get(id=id)
         posts = Post.objects.filter(poster=user)
-        context['user'] = user
-        context['posts'] = posts
+        context['user_profile'] = user
+        try:
+            page = Paginator(posts, posts_per_page).page(page_num)
+        except EmptyPage:
+            page = Paginator(posts, posts_per_page).page(1)
+        context['posts'] = page
+        context['posts_count'] = posts.count()
     except ObjectDoesNotExist:
         messages.warning(request, 'Account not found!')
         return redirect('/')
     
-    return render(request, 'profile.html', context)
+    return render(request, 'home.html', context)
 
 
 # API CALLS
@@ -95,13 +117,15 @@ def follow_user(request, id):
 def search_user(request, name):
     if request.method == 'POST':
         try:
-            user = Account.objects.get(username=name)
-            return JsonResponse({
+            user = Account.objects.get(username__iexact=name)
+            context = JsonResponse({
                 'id': user.id,
                 'username': user.username,
                 'followers': user.followers.all().count(),
                 'following': user.following.all().count(),
-                'i_follow': user in request.user.following.all()
             })
+            if request.user.is_authenticated:
+                context['i_follow'] = user in request.user.following.all()
+            return context
         except ObjectDoesNotExist:
             return HttpResponseBadRequest()

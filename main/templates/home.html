@@ -1,107 +1,118 @@
 {% extends "index.html" %}
 {% block content %}
-<div id="app">
     <!-- news feed -->
-    <div>
-       <div class="mb-3" style="text-align: center; max-width: 42rem;">
-            {% if request.user.is_authenticated %}
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="input-group">
-                        <textarea name="content" class="form-control"></textarea>
-                        <div class="input-group-prepend">
-                        <button class="btn btn-primary" type="submit"> Blip </button>
-                        </div>
-                    </div>
-                </form>
-                {% if post_form.non_field_errors %}
-                    <p>{{post_form.non_field_errors}}</p>
-                {% endif%}
-            {% endif %}
-       </div>
-       <div>
-          {% for post in posts %}
-          <div class="card container  mb-3" style="max-width: 40rem;">
-             <div class="card-header bg-transparent border-success">
-                {{post.poster}}
-                {% if user.is_authenticated %}
-                    {% if post.poster != request.user  %}
-                        {% if post.poster not in request.user.following.all %}
-                            <a v-on:click="follow($event, {{post.poster.id}})" type="button" class="btn btn-sm btn-primary">follow</a>
-                        {% endif %}
-                    {% endif %}
-                {% endif %}
-             </div>
-             <div class="card-body ">
-                <h3 class="card-text">{{ post.content }}</h3>
-             </div>
-             <div class="card-footer bg-transparent border-success=">
+<div>
+    <div class="mb-3 postBar">
+    {% if user_profile %}
+        <div style="text-align: center;">
+            <h1 class="text-danger">{{user_profile.username}}</h1>
+            <h1>Followers: {{user_profile.followers.all.count}}</h1>
+            <h1>Following: {{user_profile.following.all.count}}</h1>
+            <h1>Total Blips: {{posts_count}}</h1>
+        </div>
+    {% else %}
+        {% if request.user.is_authenticated %}
+            <form method="post">
                 {% csrf_token %}
-                Likes: <span id="{{post.id}}">{{ post.likes }}</span>
-                {% if user.is_authenticated %}
-                    {% if request.user in post.likers.all %}
-                        <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
-                    {% else %}
-                        <a v-on:click="like({{post.id}}); $event.target.classList.toggle('disabled'); $event.target.text = 'Liked'" type="button" class="btn btn-outline-success btn-sm">Like</a>
+                <div class="input-group">
+                    <textarea name="content" class="form-control"></textarea>
+                    <div class="input-group-prepend">
+                    <button class="btn btn-primary" type="submit"> Blip </button>
+                    </div>
+                </div>
+            </form>
+            {% if post_form.non_field_errors %}
+                <p>{{post_form.non_field_errors}}</p>
+            {% endif%}
+        {% endif %}
+    {% endif %}
+    
+        
+    </div>
+    <div class="infinite-container">
+        {% for post in posts %}
+        <div class="card container mb-3 infinite-item" style="max-width: 40rem;">
+            <div class="card-header bg-transparent border-success">
+            <a href="/profile/{{post.poster.id}}">{{post.poster}}</a>
+            {% if user.is_authenticated %}
+                {% if post.poster != request.user  %}
+                    {% if post.poster not in request.user.following.all %}
+                        <a onclick="follow(event, '{{post.poster.id}}')" type="button" class="btn btn-sm btn-primary">follow</a>
                     {% endif %}
                 {% endif %}
-             </div>
-          </div>
-          {% endfor %}
-       </div>
+            {% endif %}
+            </div>
+            <div class="card-body ">
+            <h3 class="card-text">{{ post.content }}</h3>
+            </div>
+            <div class="card-footer bg-transparent border-success=">
+            {% csrf_token %}
+            Likes: <span id="{{post.id}}">{{ post.likes }}</span>
+            {% if user.is_authenticated %}
+                {% if request.user in post.likers.all %}
+                    <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
+                {% else %}
+                    <a onclick="like(event,'{{post.id}}')" type="button" class="btn btn-outline-success btn-sm">Like</a>
+                {% endif %}
+            {% endif %}
+            </div>
+        </div>
+        {% endfor %}
     </div>
- </div>
+    {% if posts.has_next %}
+        <a class="infinite-more-link" href="?page={{posts.next_page_number}}"></a>
+    {% endif %}
+</div>
+
 <script>
 axios.defaults.xsrfCookieName = 'csrftoken'
 axios.defaults.xsrfHeaderName = "X-CSRFTOKEN"
-var app = new Vue({
-    delimiters: ["[[", "]]"],
-    el: '#app',
-    data: function(){
-        return{
-            searchword: '',
-            person: ''  
-        }
-    },
-    methods:{
-        like : function(id){
-            var likes = $('#'+id)
-            console.log(likes)
-            axios.post('/like/'+id, {
-            })
-            .then(function (response) {
-                console.log(response);
-                likes.text(response.data.likes)
-            })
-            .catch(function (error) {
-                console.log(error);
-            });
-        },
 
-        follow : function(e, id){
-            axios.post('/follow/'+id,{
-            }).then(function(response){
-                console.log(response)
-                e.target.classList.toggle('disabled');
-                e.target.text = "Followed"
-            })
-            .catch(function(error){
-                console.log(error)
-            })
-        },
+function like(e, id){
+    var likes = $('#'+id)
+    axios.post('/like/'+id, {})
+    .then(function (response) {
+        console.log(response);
+        likes.text(response.data.likes)
+    })
+    .catch(function (error) {
+        console.log(error);
+    });
 
-        searchUser : function(){
-            var self = this
-            axios.post('/search/'+this.searchword,{
-            }).then(function(response){
-                self.person = response.data
-                console.log(response.data)
-            })
-            .catch(function(error){
-                console.log(error)
-            })
-        }
-    }
+    e.target.classList.toggle('disabled')
+    e.target.text = 'Liked'
+}
+
+function follow(e, id){
+    axios.post('/follow/'+id,{})
+    .then(function(response){
+        console.log(response)
+        e.target.classList.toggle('disabled');
+        e.target.text = "Followed"
+    })
+    .catch(function(error){
+        console.log(error)
+    })
+}
+
+var infinite = new Waypoint.Infinite({
+    element: $('.infinite-container')[0],
+    offset: 'bottom-in-view',
 })
+
 </script>
+
+<style>
+.postBar {
+    text-align: center;
+    width: 40rem;
+}
+@media only screen and (max-width: 600px) {
+    .postBar {
+        width: 25rem;
+    }
+}
+
+
+</style>
 {% endblock content %}

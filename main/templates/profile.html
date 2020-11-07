@@ -9,15 +9,15 @@
             <h1>Following: {{user.following.all.count}}</h1>
             <h1>Total Blips: {{posts.count}}</h1>
         </div>
-        <div>
+        <div class="infinite-container">
             {% for post in posts %}
-            <div class="card container  mb-3" style="max-width: 40rem;">
+            <div class="card container infinite-item mb-3" style="max-width: 40rem;">
                 <div class="card-header bg-transparent border-success">
                     {{post.poster}}
-                    {% if user.is_authenticated %}
+                    {% if request.user.is_authenticated %}
                         {% if post.poster != request.user  %}
                             {% if post.poster not in request.user.following.all %}
-                                <a v-on:click="follow($event, {{post.poster.id}})" type="button" class="btn btn-sm btn-primary">follow</a>
+                                <a @clicked="follow($event, {{post.poster.id}})" type="button" class="btn btn-sm btn-primary">follow</a>
                             {% endif %}
                         {% endif %}
                     {% endif %}
@@ -28,7 +28,7 @@
                 <div class="card-footer bg-transparent border-success=">
                     {% csrf_token %}
                     Likes: <span id="{{post.id}}">{{ post.likes }}</span>
-                    {% if user.is_authenticated %}
+                    {% if request.user.is_authenticated %}
                         {% if request.user in post.likers.all %}
                             <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
                         {% else %}
@@ -39,6 +39,9 @@
             </div>
             {% endfor %}
         </div>
+        {% if posts.has_next %}
+            <a class="infinite-more-link" href="?page={{posts.next_page_number}}">next</a>
+        {% endif %}
         </div>
 </div>
 <script>
@@ -92,6 +95,13 @@ var app = new Vue({
             })
         }
     }
+})
+someJSfunc = function() {
+       app.$options.methods.searchUser();
+};
+var infinite = new Waypoint.Infinite({
+    element: $('.infinite-container')[0],
+    offset: 'bottom-in-view',
 })
 </script>
 {% endblock content %}

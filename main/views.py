@@ -33,7 +33,7 @@ def home_view(request):
         form = PostForm()
         context['post_form'] = form
         followers = (Q(request.user.following.all()) | Q(request.user))
-        
+
         if len(followers) > 3:
             posts = Post.objects.filter(poster__in=followers).order_by('-date_posted')
         else:
@@ -100,6 +100,7 @@ def like_post(request, id):
 
 @login_required(login_url='/account/login/')
 def follow_user(request, id):
+    print(request)
     if request.method == 'POST':
         try:
             user = request.user
@@ -118,14 +119,18 @@ def search_user(request, name):
     if request.method == 'POST':
         try:
             user = Account.objects.get(username__iexact=name)
+
+            #check if I follow him
+            if request.user.is_authenticated:
+                i_follow = user in request.user.following.all()
+
             context = JsonResponse({
                 'id': user.id,
                 'username': user.username,
                 'followers': user.followers.all().count(),
                 'following': user.following.all().count(),
+                'i_follow': i_follow
             })
-            if request.user.is_authenticated:
-                context['i_follow'] = user in request.user.following.all()
             return context
         except ObjectDoesNotExist:
             return HttpResponseBadRequest()

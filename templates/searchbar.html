@@ -9,14 +9,12 @@
     <br>
     <div id="result" class="card">
         <div class="card-body">
-            <!-- T O D O -->
-            <span><a href="'/profile/' + person.id" id="person_username">username</a></span>
+            <!-- T O D O: FIX USER ID NOT DETECTED?!?!?!?!?!?!? -->
+            <span><a id="person_username">username</a></span>
             <span id="person_followers">followers</span>
             {% if request.user.is_authenticated %}
-                {% if user.id in request.user.following.all %}
-                {% else %}
-                    <a id="follow" onclick="follow(event, '{{user.id}}')" type="button" class="btn btn-sm btn-primary">follow</a>
-                {% endif %}
+            {{content}}
+                <a id="follow" type="button" class="btn btn-sm btn-primary">follow</a>
             {% endif %}
         </div>
     </div>
@@ -24,25 +22,24 @@
 <br>
 
 <script>
-axios.defaults.xsrfCookieName = 'csrftoken'
-axios.defaults.xsrfHeaderName = "X-CSRFTOKEN"
-
 $('#result').hide()
-var user;
 function searchUser(){
     searchword = $('#searchword')
 
     axios.post('/search/'+searchword.val(),{})
     .then(function(response){
         $('#result').show(250)
+        var user;
         user = response.data
         $('#person_username').text(user.username)
+        $('#person_username').attr("href", "/profile/"+ user.id +"")
         $('#person_followers').text(' | ' + user.followers + ' followers')
         if(!user.i_follow){
             $('#follow').html('follow')
+            $('#follow').attr("onClick", "follow(event," + user.id+ ")");
         }else{
             $('#follow').html('following')
-            $('#follow').classList.toggle('disabled');
+            $('#follow').addClass('disabled');
         }
     })
     .catch(function(error){
@@ -51,7 +48,7 @@ function searchUser(){
     })
 }
 function fl(e, id){
-    axios.post('/follow/'+id,{})
+    axios.post('/follow/'+id.toString(),{})
     .then(function(response){
         console.log(response)
         e.target.classList.toggle('disabled');

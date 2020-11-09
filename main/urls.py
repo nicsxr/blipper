@@ -8,4 +8,5 @@ urlpatterns = [
 	path('like/<id>', views.like_post, name='like'),
 	path('follow/<id>', views.follow_user, name='follow'),
 	path('search/<name>', views.search_user, name='search'),
+	path('post/<id>', views.post_update_view, name='post_update'),
 ]

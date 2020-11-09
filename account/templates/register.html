@@ -5,14 +5,16 @@
 
     {% for field in registration_form %}
         <p>
-            {{field.label_tag}}
+            <h1 class="text-white">{{field.label_tag}}</h1>
             {{field}}
             {% for error in field.errors %}
-                <small>{{error}}</small>
+                <small class="text-danger">{{error}}</small>
             {% endfor %}
         </p>
     {% endfor %}
-
-    <button type="submit">Register</button>
+    <div class="d-flex justify-content-around">
+        <a style="width: 29%;" href="/account/login/" class="btn btn-outline-danger btn-lg" >Login</a>
+        <button style="width: 69%;" class="btn btn-outline-primary btn-lg" type="submit">Register</button>
+    </div>
 </form>
 {% endblock content %}

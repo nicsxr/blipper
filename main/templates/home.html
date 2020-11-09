@@ -6,9 +6,9 @@
     {% if user_profile %}
         <div style="text-align: center;">
             <h1 class="text-danger">{{user_profile.username}}</h1>
-            <h1>Followers: {{user_profile.followers.all.count}}</h1>
-            <h1>Following: {{user_profile.following.all.count}}</h1>
-            <h1>Total Blips: {{posts_count}}</h1>
+            <h1 class="text-white">Followers: {{user_profile.followers.all.count}}</h1>
+            <h1 class="text-white">Following: {{user_profile.following.all.count}}</h1>
+            <h1 class="text-white">Total Blips: {{posts_count}}</h1>
         </div>
     {% else %}
         {% if request.user.is_authenticated %}
@@ -33,28 +33,35 @@
         {% for post in posts %}
         <div class="card container mb-3 infinite-item" style="max-width: 40rem;">
             <div class="card-header bg-transparent border-success">
-            <a href="/profile/{{post.poster.id}}">{{post.poster}}</a>
-            {% if user.is_authenticated %}
-                {% if post.poster != request.user  %}
-                    {% if post.poster not in request.user.following.all %}
-                        <a onclick="follow(event, '{{post.poster.id}}')" type="button" class="btn btn-sm btn-primary">follow</a>
+                <div class="d-flex justify-content-between">
+                    <a href="/profile/{{post.poster.id}}">{{post.poster}}</a>
+                    {% if request.user == post.poster %}
+                        <a href="/post/{{post.id}}">Edit</a>   
                     {% endif %}
-                {% endif %}
-            {% endif %}
+                    {% if user.is_authenticated %}
+                        {% if post.poster != request.user  %}
+                            {% if post.poster not in request.user.following.all %}
+                                <a onclick="follow(event, '{{post.poster.id}}')" type="button" class="btn btn-sm btn-primary">follow</a>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body ">
-            <h3 class="card-text">{{ post.content }}</h3>
+                <h3 class="card-text">{{ post.content }}</h3>
             </div>
             <div class="card-footer bg-transparent border-success=">
             {% csrf_token %}
-            Likes: <span id="{{post.id}}">{{ post.likes }}</span>
-            {% if user.is_authenticated %}
-                {% if request.user in post.likers.all %}
-                    <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
-                {% else %}
-                    <a onclick="like(event,'{{post.id}}')" type="button" class="btn btn-outline-success btn-sm">Like</a>
+            <div class="d-flex justify-content-between">
+                {% if user.is_authenticated %}
+                    {% if request.user in post.likers.all %}
+                        <a type="button" class="btn btn-outline-success btn-sm disabled">Liked</a>
+                    {% else %}
+                        <a onclick="like(event,'{{post.id}}')" type="button" class="btn btn-outline-success btn-sm">Like</a>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
+                <span id="{{post.id}}">Likes: {{ post.likes }}</span>
+            </div>
             </div>
         </div>
         {% endfor %}
@@ -105,14 +112,17 @@ var infinite = new Waypoint.Infinite({
 <style>
 .postBar {
     text-align: center;
-    width: 40rem;
+    min-width: 40rem;
 }
-@media only screen and (max-width: 600px) {
+@media only screen and (max-width: 700px) {
     .postBar {
-        width: 25rem;
+        min-width: 20rem;
     }
 }
 
+.infinite-item{
+    background-color: #F4E9CD;
+}
 
 </style>
 {% endblock content %}

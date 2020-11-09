@@ -5,17 +5,18 @@
 
     {% for field in login_form %}
         <p>
-            {{field.label_tag}}
+            <h1 class="text-white">{{field.label_tag}}</h1>
             {{field}}
             {% for error in field.errors %}
-                <small>{{error}}</small>
+                <small class="text-danger">{{error}}</small>
             {% endfor %}
         </p>
     {% endfor %}
-
     {% if login_form.non_field_errors %}
         <p>{{login_form.non_field_errors}}</p>
     {% endif%}
-    <button type="submit">Login</button>
+    <br>
+    <a href="/account/register/" class="btn btn-outline-danger btn-lg" >Register</a>
+    <button class="btn btn-outline-primary btn-lg" type="submit">Login</button>
 </form>
 {% endblock content %}

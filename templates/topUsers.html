@@ -1,0 +1,22 @@
+{% block topUsers %}
+<div style="width: 100%; text-align: center; justify-content: center;">
+    {% if top_users %}
+        <h1 class="text-white">Top users</h1>
+        {% for user in top_users %}
+        <div class="inner card text-white bg-dark mb-3" style="max-width: 18rem;">
+            <a href="/profile/{{user.id}}" class="card-header">{{user.username}}</a>
+            <div class="card-body">
+                <p>Followers: {{user.followers.count}}</p>
+                <p>Following: {{user.followers.count}}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+<style>
+.inner {
+  width: 50%;
+  margin: 0 auto;
+}
+</style>
+{% endblock topUsers %}

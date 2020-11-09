@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from django.db.models import Q
+from django.db.models import Q, Count
 from account.models import Account
 from main.models import Post
-from main.forms import PostForm
+from main.forms import PostForm, PostUpdateForm
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -15,6 +15,8 @@ posts_per_page = 7
 def home_view(request):
     context = {
     }
+    users = Account.objects.annotate(count=Count('followers')).order_by('-count')[:3]
+    context['top_users'] = users
     page_num = request.GET.get('page',1)
     if request.POST:
         form = PostForm(request.POST)
@@ -76,6 +78,41 @@ def profile_view(request, id):
     
     return render(request, 'home.html', context)
 
+@login_required
+def post_update_view(request, id):
+
+    try:
+        post = Post.objects.get(id=id)
+    except ObjectDoesNotExist:
+        messages.warning(request, 'Post does not exist.')
+        return redirect('/')
+
+    if post.poster != request.user:
+        messages.warning(request, 'Post does not belong to you!')
+        return redirect('/')
+    
+
+    if request.method == 'POST':
+        form = PostUpdateForm(request.POST, instance=post)
+        if 'delete' in request.POST:
+            post.delete()
+
+            messages.warning(request, 'Post DELETED succesfully!')
+            return redirect('/')
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Post updated succesfully!')
+            return redirect('/')
+        else:
+            messages.warning(request, 'Something went wrong!')
+            return redirect('/')
+
+    else:
+        form = PostUpdateForm(instance=post)
+    context = {
+        'form': form,
+    }
+    return render(request, 'postUpdate.html', context)
 
 # API CALLS
 @login_required(login_url='/account/login/')
@@ -111,7 +148,7 @@ def follow_user(request, id):
 
             user.following.add(followee)
             followee.followers.add(user)
-            return HttpResponse('Success')
+            return HttpResponse(followee.followers.count())
         except ObjectDoesNotExist:
             return HttpResponseBadRequest()
 
@@ -123,6 +160,8 @@ def search_user(request, name):
             #check if I follow him
             if request.user.is_authenticated:
                 i_follow = user in request.user.following.all()
+            else:
+                i_follow = False
 
             context = JsonResponse({
                 'id': user.id,
@@ -134,3 +173,4 @@ def search_user(request, name):
             return context
         except ObjectDoesNotExist:
             return HttpResponseBadRequest()
+        
